@@ -42,7 +42,6 @@ export async function getUserAccounts() {
       },
     });
 
-    // Serialize accounts before sending to client
     const serializedAccounts = accounts.map(serializeTransaction);
 
     return serializedAccounts;

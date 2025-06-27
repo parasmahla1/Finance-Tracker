@@ -1,13 +1,13 @@
-// import { getUserAccounts } from "@/actions/dashboard";
+import { getUserAccounts } from "@/actions/dashboard";
 
 import { CreateAccountDrawer } from "@/components/create-account-drawer";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import useFetch from "@/hooks/use-fetch";
-
+import { AccountCard } from "./_components/account-card";
 
 export default async function DashboardPage() {
+    const accounts = await getUserAccounts();
 //   const [accounts, transactions] = await Promise.all([
 //     getUserAccounts(),
 //     getDashboardData(),
@@ -44,10 +44,10 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </CreateAccountDrawer>
-        {/* {accounts.length > 0 &&
+        {accounts.length > 0 &&
           accounts?.map((account) => (
             <AccountCard key={account.id} account={account} />
-          ))} */}
+          ))}
       </div>
     </div>
   );
