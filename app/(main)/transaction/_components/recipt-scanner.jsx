@@ -33,7 +33,17 @@ export function ReceiptScanner({ onScanComplete }) {
   }, [scanReceiptLoading, scannedData]);
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="space-y-4">
+      <div className="text-center">
+        <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center justify-center gap-2">
+          <span className="text-2xl">🤖</span>
+          AI Receipt Scanner
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Upload a receipt photo and let AI automatically extract transaction details
+        </p>
+      </div>
+      
       <input
         type="file"
         ref={fileInputRef}
@@ -45,21 +55,22 @@ export function ReceiptScanner({ onScanComplete }) {
           if (file) handleReceiptScan(file);
         }}
       />
+      
       <Button
         type="button"
         variant="outline"
-        className="w-full h-10 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-500 animate-gradient hover:opacity-90 transition-opacity text-white hover:text-white"
+        className="w-full h-14 text-base font-medium bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white border-0 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
         onClick={() => fileInputRef.current?.click()}
         disabled={scanReceiptLoading}
       >
         {scanReceiptLoading ? (
           <>
-            <Loader2 className="mr-2 animate-spin" />
+            <Loader2 className="mr-3 h-5 w-5 animate-spin" />
             <span>Scanning Receipt...</span>
           </>
         ) : (
           <>
-            <Camera className="mr-2" />
+            <Camera className="mr-3 h-5 w-5" />
             <span>Scan Receipt with AI</span>
           </>
         )}
