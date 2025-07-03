@@ -260,7 +260,6 @@ export function AddTransactionForm({
             {filteredCategories.map((category) => (
               <SelectItem key={category.id} value={category.id} className="text-base py-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-lg">{category.icon || "📁"}</span>
                   <span>{category.name}</span>
                 </div>
               </SelectItem>
