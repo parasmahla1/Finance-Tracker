@@ -22,9 +22,11 @@ const LandingPage = () => {
             {statsData.map((stat, index) => (
               <div key={index} className="text-center group">
                 <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform duration-300">
-                  {stat.value}
+                  {/* {stat.value} */}
                 </div>
-                <div className="text-muted-foreground font-medium">{stat.label}</div>
+                <div className="text-muted-foreground font-medium">
+                  {/* {stat.label} */}
+                  </div>
               </div>
             ))}
           </div>
