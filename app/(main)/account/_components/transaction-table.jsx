@@ -84,7 +84,9 @@ export function TransactionTable({ transactions }) {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       result = result.filter((transaction) =>
-        transaction.description?.toLowerCase().includes(searchLower)
+        [transaction.description, transaction.category, transaction.type]
+          .filter(Boolean)
+          .some((value) => value.toLowerCase().includes(searchLower))
       );
     }
 
@@ -137,6 +139,10 @@ export function TransactionTable({ transactions }) {
     );
   }, [filteredAndSortedTransactions, currentPage]);
 
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   const handleSort = (field) => {
     setSortConfig((current) => ({
       field,
@@ -154,17 +160,18 @@ export function TransactionTable({ transactions }) {
   };
 
   const handleSelectAll = () => {
-    setSelectedIds((current) =>
-      current.length === paginatedTransactions.length
-        ? []
-        : paginatedTransactions.map((t) => t.id)
-    );
+    const pageIds = paginatedTransactions.map((transaction) => transaction.id);
+    setSelectedIds((current) => {
+      const allSelected = pageIds.every((id) => current.includes(id));
+      return allSelected ? current.filter((id) => !pageIds.includes(id)) : [...new Set([...current, ...pageIds])];
+    });
   };
 
   const {
     loading: deleteLoading,
     fn: deleteFn,
     data: deleted,
+    error: deleteError,
   } = useFetch(bulkDeleteTransactions);
 
   const handleBulkDelete = async () => {
@@ -175,14 +182,25 @@ export function TransactionTable({ transactions }) {
     )
       return;
 
-    deleteFn(selectedIds);
+    await deleteFn(selectedIds);
   };
 
   useEffect(() => {
-    if (deleted && !deleteLoading) {
-      toast.error("Transactions deleted successfully");
+    if (deleted?.success && !deleteLoading) {
+      toast.success("Transactions deleted");
+      setSelectedIds([]);
+      router.refresh();
     }
-  }, [deleted, deleteLoading]);
+  }, [deleted, deleteLoading, router]);
+
+  useEffect(() => {
+    if (deleteError) toast.error(deleteError.message || "Unable to delete transactions");
+  }, [deleteError]);
+
+  const handleSingleDelete = async (id) => {
+    if (!window.confirm("Delete this transaction? This cannot be undone.")) return;
+    await deleteFn([id]);
+  };
 
   const handleClearFilters = () => {
     setSearchTerm("");
@@ -198,13 +216,11 @@ export function TransactionTable({ transactions }) {
 
   return (
     <div className="space-y-4">
-      {deleteLoading && (
-        <BarLoader className="mt-4" width={"100%"} color="#9333ea" />
-      )}
+      {deleteLoading && <BarLoader className="mt-1" width={"100%"} color="var(--primary)" />}
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/20 p-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search transactions..."
             value={searchTerm}
@@ -212,10 +228,10 @@ export function TransactionTable({ transactions }) {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="pl-8"
+            className="bg-background pl-9"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Select
             value={typeFilter}
             onValueChange={(value) => {
@@ -223,7 +239,7 @@ export function TransactionTable({ transactions }) {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[145px] bg-background">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
@@ -239,7 +255,7 @@ export function TransactionTable({ transactions }) {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[165px] bg-background">
               <SelectValue placeholder="All Transactions" />
             </SelectTrigger>
             <SelectContent>
@@ -256,7 +272,7 @@ export function TransactionTable({ transactions }) {
                 size="sm"
                 onClick={handleBulkDelete}
               >
-                <Trash className="h-4 w-4 mr-2" />
+                <Trash className="size-4" />
                 Delete Selected ({selectedIds.length})
               </Button>
             </div>
@@ -276,16 +292,13 @@ export function TransactionTable({ transactions }) {
       </div>
 
       {/* Transactions Table */}
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-xl border border-border/70">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted/30">
             <TableRow>
               <TableHead className="w-[50px]">
                 <Checkbox
-                  checked={
-                    selectedIds.length === paginatedTransactions.length &&
-                    paginatedTransactions.length > 0
-                  }
+                    checked={paginatedTransactions.length > 0 && paginatedTransactions.every((transaction) => selectedIds.includes(transaction.id))}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
@@ -348,7 +361,7 @@ export function TransactionTable({ transactions }) {
               </TableRow>
             ) : (
               paginatedTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
+                <TableRow key={transaction.id} className="group">
                   <TableCell>
                     <Checkbox
                       checked={selectedIds.includes(transaction.id)}
@@ -358,23 +371,19 @@ export function TransactionTable({ transactions }) {
                   <TableCell>
                     {format(new Date(transaction.date), "PP")}
                   </TableCell>
-                  <TableCell>{transaction.description}</TableCell>
+                  <TableCell>{transaction.description || <span className="text-muted-foreground">Untitled transaction</span>}</TableCell>
                   <TableCell className="capitalize">
-                    <span
-                      style={{
-                        background: categoryColors[transaction.category],
-                      }}
-                      className="px-2 py-1 rounded text-white text-sm"
-                    >
-                      {transaction.category}
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                      <i className="size-1.5 rounded-full" style={{ backgroundColor: categoryColors[transaction.category] || "var(--muted-foreground)" }} />
+                      <span>{transaction.category.replaceAll("-", " ")}</span>
                     </span>
                   </TableCell>
                   <TableCell
                     className={cn(
-                      "text-right font-medium",
+                      "text-right font-semibold",
                       transaction.type === "EXPENSE"
-                        ? "text-red-500"
-                        : "text-green-500"
+                        ? "text-destructive"
+                        : "text-success"
                     )}
                   >
                     {transaction.type === "EXPENSE" ? "-" : "+"}$
@@ -387,7 +396,7 @@ export function TransactionTable({ transactions }) {
                           <TooltipTrigger>
                             <Badge
                               variant="secondary"
-                              className="gap-1 bg-purple-100 text-purple-700 hover:bg-purple-200"
+                              className="gap-1"
                             >
                               <RefreshCw className="h-3 w-3" />
                               {
@@ -401,10 +410,7 @@ export function TransactionTable({ transactions }) {
                             <div className="text-sm">
                               <div className="font-medium">Next Date:</div>
                               <div>
-                                {format(
-                                  new Date(transaction.nextRecurringDate),
-                                  "PPP"
-                                )}
+                                {transaction.nextRecurringDate ? format(new Date(transaction.nextRecurringDate), "PPP") : "Next date not set"}
                               </div>
                             </div>
                           </TooltipContent>
@@ -420,7 +426,7 @@ export function TransactionTable({ transactions }) {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="icon" className="size-8 opacity-70 transition-opacity group-hover:opacity-100">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -437,7 +443,7 @@ export function TransactionTable({ transactions }) {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => deleteFn([transaction.id])}
+                          onClick={() => handleSingleDelete(transaction.id)}
                         >
                           Delete
                         </DropdownMenuItem>
@@ -463,7 +469,7 @@ export function TransactionTable({ transactions }) {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm">
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages} · {filteredAndSortedTransactions.length} results
           </span>
           <Button
             variant="outline"

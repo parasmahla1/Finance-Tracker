@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -30,6 +31,7 @@ import { accountSchema } from "@/app/lib/schema";
 
 export function CreateAccountDrawer({ children }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -59,23 +61,24 @@ export function CreateAccountDrawer({ children }) {
   };
 
   useEffect(() => {
-    if (newAccount) {
+    if (newAccount?.success) {
       toast.success("Account created successfully");
       reset();
       setOpen(false);
+      router.refresh();
     }
-  }, [newAccount, reset]);
+  }, [newAccount, reset, router]);
 
   useEffect(() => {
-    if (error) {
-      toast.error(error.message || "Failed to create account");
+    if (error || (newAccount && !newAccount.success)) {
+      toast.error(error?.message || newAccount?.error || "Failed to create account");
     }
-  }, [error]);
+  }, [error, newAccount]);
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
-      <DrawerContent>
+      <DrawerContent className="max-h-[92vh] overflow-y-auto">
         <DrawerHeader>
           <DrawerTitle>Create New Account</DrawerTitle>
         </DrawerHeader>

@@ -6,10 +6,10 @@ import { revalidatePath } from "next/cache";
 
 const serializeDecimal = (obj) => {
   const serialized = { ...obj };
-  if (obj.balance) {
+  if (obj.balance !== undefined && obj.balance !== null) {
     serialized.balance = obj.balance.toNumber();
   }
-  if (obj.amount) {
+  if (obj.amount !== undefined && obj.amount !== null) {
     serialized.amount = obj.amount.toNumber();
   }
   return serialized;
@@ -28,6 +28,12 @@ export async function updateDefaultAccount(accountId) {
     if (!user) {
       throw new Error("User not found");
     }
+
+    const targetAccount = await db.account.findFirst({
+      where: { id: accountId, userId: user.id },
+      select: { id: true },
+    });
+    if (!targetAccount) throw new Error("Account not found");
 
     // First, unset any existing default account
     await db.account.updateMany({
@@ -48,7 +54,7 @@ export async function updateDefaultAccount(accountId) {
     });
 
     revalidatePath("/dashboard");
-    return { success: true, data: serializeTransaction(account) };
+    return { success: true, data: serializeDecimal(account) };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -111,8 +117,8 @@ export async function bulkDeleteTransactions(transactionIds) {
     const accountBalanceChanges = transactions.reduce((acc, transaction) => {
       const change =
         transaction.type === "EXPENSE"
-          ? transaction.amount
-          : -transaction.amount;
+          ? transaction.amount.toNumber()
+          : -transaction.amount.toNumber();
       acc[transaction.accountId] = (acc[transaction.accountId] || 0) + change;
       return acc;
     }, {});
@@ -143,7 +149,9 @@ export async function bulkDeleteTransactions(transactionIds) {
     });
 
     revalidatePath("/dashboard");
-    revalidatePath("/account/[id]");
+    for (const accountId of Object.keys(accountBalanceChanges)) {
+      revalidatePath(`/account/${accountId}`);
+    }
 
     return { success: true };
   } catch (error) {

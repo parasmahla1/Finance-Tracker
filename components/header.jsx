@@ -1,30 +1,27 @@
-import React from "react";
 import { Button } from "./ui/button";
-import { PenBox, LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, PenBox } from "lucide-react";
 import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
-import { checkUser } from "@/lib/checkUser";
 import Logo from "./logo";
+import { ThemeToggle } from "./theme-toggle";
 
 const Header = async () => {
-  await checkUser();
-
   return (
-    <header className="fixed top-0 w-full bg-white/70 dark:bg-black/70 backdrop-blur-xl z-50 border-b border-border/50">
-      <nav className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="transition-transform hover:scale-105">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Logo />
         </Link>
 
         {/* Navigation Links - Different for signed in/out users */}
-        <div className="hidden md:flex items-center space-x-8">
+        <div className="hidden items-center gap-7 md:flex">
           <SignedOut>
-            <a href="#features" className="text-muted-foreground hover:text-primary transition-colors font-medium">
+            <a href="#features" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
               Features
             </a>
             <a
               href="#testimonials"
-              className="text-muted-foreground hover:text-primary transition-colors font-medium"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Testimonials
             </a>
@@ -32,27 +29,26 @@ const Header = async () => {
         </div>
 
      
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <ThemeToggle />
           <SignedIn>
-            <Link
-              href="/dashboard"
-              className="text-muted-foreground hover:text-primary flex items-center gap-2 transition-colors"
-            >
-              <Button variant="outline" className="shadow-sm hover:shadow-md transition-all">
+            <Button variant="outline" asChild className="hidden sm:inline-flex">
+              <Link href="/dashboard">
                 <LayoutDashboard size={18} />
-                <span className="hidden md:inline">Dashboard</span>
-              </Button>
-            </Link>
-            <a href="/transaction/create">
-              <Button className="flex items-center gap-2 shadow-sm hover:shadow-md transition-all bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                Dashboard
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/transaction/create">
                 <PenBox size={18} />
-                <span className="hidden md:inline">Add Transaction</span>
-              </Button>
-            </a>
+                <span className="hidden sm:inline">Add transaction</span>
+                <span className="sm:hidden">Add</span>
+              </Link>
+            </Button>
           </SignedIn>
           <SignedOut>
             <SignInButton forceRedirectUrl="/dashboard">
-              <Button variant="outline" className="shadow-sm hover:shadow-md transition-all">Login</Button>
+              <Button variant="outline">Sign in</Button>
             </SignInButton>
           </SignedOut>
           <SignedIn>

@@ -8,10 +8,10 @@ import { revalidatePath } from "next/cache";
 
 const serializeTransaction = (obj) => {
   const serialized = { ...obj };
-  if (obj.balance) {
+  if (obj.balance !== undefined && obj.balance !== null) {
     serialized.balance = obj.balance.toNumber();
   }
-  if (obj.amount) {
+  if (obj.amount !== undefined && obj.amount !== null) {
     serialized.amount = obj.amount.toNumber();
   }
   return serialized;
@@ -47,6 +47,7 @@ export async function getUserAccounts() {
     return serializedAccounts;
   } catch (error) {
     console.error(error.message);
+    throw error;
   }
 }
 
@@ -90,8 +91,8 @@ export async function createAccount(data) {
     }
 
     
-    const balanceFloat = parseFloat(data.balance);
-    if (isNaN(balanceFloat)) {
+    const balanceFloat = Number(data.balance);
+    if (!Number.isFinite(balanceFloat)) {
       throw new Error("Invalid balance amount");
     }
 
@@ -112,7 +113,8 @@ export async function createAccount(data) {
 
     const account = await db.account.create({
       data: {
-        ...data,
+        name: data.name.trim(),
+        type: data.type,
         balance: balanceFloat,
         userId: user.id,
         isDefault: shouldBeDefault, 

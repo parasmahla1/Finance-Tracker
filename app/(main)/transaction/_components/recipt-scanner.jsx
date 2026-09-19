@@ -14,6 +14,7 @@ export function ReceiptScanner({ onScanComplete }) {
     loading: scanReceiptLoading,
     fn: scanReceiptFn,
     data: scannedData,
+    error: scanError,
   } = useFetch(scanReceipt);
 
   const handleReceiptScan = async (file) => {
@@ -28,19 +29,22 @@ export function ReceiptScanner({ onScanComplete }) {
   useEffect(() => {
     if (scannedData && !scanReceiptLoading) {
       onScanComplete(scannedData);
-      toast.success("Receipt scanned successfully");
     }
   }, [scanReceiptLoading, scannedData]);
 
+  useEffect(() => {
+    if (scanError) toast.error(scanError.message || "Unable to scan this receipt");
+  }, [scanError]);
+
   return (
     <div className="space-y-4">
-      <div className="text-center">
-        <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center justify-center gap-2">
-          <span className="text-2xl">🤖</span>
-          AI Receipt Scanner
+      <div>
+        <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <Camera className="size-4 text-primary" />
+          Scan a receipt
         </h3>
-        <p className="text-sm text-muted-foreground">
-          Upload a receipt photo and let AI automatically extract transaction details
+        <p className="mt-1 text-sm text-muted-foreground">
+          Use Gemini to prefill the amount, date, merchant, and category from a photo.
         </p>
       </div>
       
@@ -59,7 +63,7 @@ export function ReceiptScanner({ onScanComplete }) {
       <Button
         type="button"
         variant="outline"
-        className="w-full h-14 text-base font-medium bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white border-0 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+        className="w-full"
         onClick={() => fileInputRef.current?.click()}
         disabled={scanReceiptLoading}
       >

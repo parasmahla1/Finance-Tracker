@@ -1,97 +1,73 @@
 "use client";
 
-import { ArrowUpRight, ArrowDownRight, CreditCard } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { useEffect } from "react";
-import useFetch from "@/hooks/use-fetch";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import Link from "next/link";
-import { updateDefaultAccount } from "@/actions/account";
+import { CreditCard, ExternalLink } from "lucide-react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 
+import { updateDefaultAccount } from "@/actions/account";
+import useFetch from "@/hooks/use-fetch";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+
+const money = (value) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+
 export function AccountCard({ account }) {
-  const { name, type, balance, id, isDefault } = account;
-
-  const {
-    loading: updateDefaultLoading,
-    fn: updateDefaultFn,
-    data: updatedAccount,
-    error,
-  } = useFetch(updateDefaultAccount);
-
-  const handleDefaultChange = async (event) => {
-    event.preventDefault(); // Prevent navigation
-
-    if (isDefault) {
-      toast.warning("You need atleast 1 default account");
-      return; // Don't allow toggling off the default account
-    }
-
-    await updateDefaultFn(id);
-  };
+  const { name, type, balance, id, isDefault, _count } = account;
+  const { loading, fn, data, error } = useFetch(updateDefaultAccount);
 
   useEffect(() => {
-    if (updatedAccount?.success) {
-      toast.success("Default account updated successfully");
-    }
-  }, [updatedAccount]);
+    if (data?.success) toast.success("Default account updated");
+    if (data && !data.success) toast.error(data.error || "Unable to update default account");
+  }, [data]);
 
   useEffect(() => {
-    if (error) {
-      toast.error(error.message || "Failed to update default account");
-    }
+    if (error) toast.error(error.message || "Unable to update default account");
   }, [error]);
 
+  const handleDefaultChange = async (checked) => {
+    if (!checked || isDefault) {
+      toast.message("Keep one default account selected to speed up entry.");
+      return;
+    }
+    await fn(id);
+  };
+
   return (
-    <Card className="hover:shadow-xl transition-all duration-300 group relative border-0 bg-gradient-to-br from-white to-indigo-50/30 dark:from-slate-800 dark:to-indigo-900/20 hover:scale-105 overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
-      <Link href={`/account/${id}`}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 relative z-10">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <CardTitle className="text-lg font-semibold capitalize group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              {name}
-            </CardTitle>
-          </div>
-          {isDefault && (
-            <div className="bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-medium">
-              Default
-            </div>
-          )}
-          <Switch
-            checked={isDefault}
-            onClick={handleDefaultChange}
-            disabled={updateDefaultLoading}
-            className="data-[state=checked]:bg-indigo-600"
-          />
-        </CardHeader>
-        <CardContent className="relative z-10">
-          <div className="text-3xl font-bold mb-2 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            ${parseFloat(balance).toFixed(2)}
-          </div>
-          <p className="text-sm text-muted-foreground font-medium">
-            {type.charAt(0) + type.slice(1).toLowerCase()} Account
-          </p>
-        </CardContent>
-        <CardFooter className="flex justify-between text-sm relative z-10 pt-4 border-t border-border/50">
-          <div className="flex items-center text-green-600 dark:text-green-400">
-            <ArrowUpRight className="mr-2 h-4 w-4" />
-            <span className="font-medium">Income</span>
-          </div>
-          <div className="flex items-center text-red-500 dark:text-red-400">
-            <ArrowDownRight className="mr-2 h-4 w-4" />
-            <span className="font-medium">Expense</span>
-          </div>
-        </CardFooter>
-      </Link>
+    <Card className="gap-0 overflow-hidden transition-shadow hover:shadow-md">
+      <CardHeader className="flex-row items-start justify-between gap-4 space-y-0 px-5 pb-4">
+        <Link href={`/account/${id}`} className="group flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <CreditCard className="size-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold group-hover:text-primary">{name}</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              {type === "SAVINGS" ? "Savings" : "Current"} account
+            </span>
+          </span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Default</span>
+          <Switch checked={isDefault} onCheckedChange={handleDefaultChange} disabled={loading} aria-label={`Set ${name} as default`} />
+        </div>
+      </CardHeader>
+      <CardContent className="px-5 pb-5">
+        <p className="text-2xl font-semibold tracking-tight">{money(balance)}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{_count?.transactions || 0} transactions</p>
+      </CardContent>
+      <CardFooter className="justify-between border-t border-border/70 px-5 py-3">
+        <span className={isDefault ? "text-xs font-medium text-primary" : "text-xs text-muted-foreground"}>
+          {isDefault ? "Primary account" : "Not selected"}
+        </span>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={`/account/${id}`}>
+            View account <ExternalLink className="size-3.5" />
+          </Link>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

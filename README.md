@@ -4,39 +4,34 @@
   <img src="./public/favicon.svg" alt="WealthFlow Logo" width="120" height="120">
   
   <p align="center">
-    <strong>Modern financial management platform for tracking expenses, budgets, and investments</strong>
+    <strong>A focused workspace for tracking accounts, spending, and budgets</strong>
   </p>
   
   <p align="center">
     <a href="#features">Features</a> •
     <a href="#tech-stack">Tech Stack</a> •
     <a href="#getting-started">Getting Started</a> •
-    <a href="#deployment">Deployment</a> •
-    <a href="#contributing">Contributing</a>
+    <a href="#deployment">Deployment</a>
   </p>
 </div>
 
 ## Features
 
 ### Core Functionality
-- **Multi-Account Management** - Track multiple bank accounts, credit cards, and wallets
-- **Smart Categorization** - Automatic transaction categorization with customizable categories
-- **Budget Tracking** - Set and monitor monthly budgets with progress indicators
-- **Recurring Transactions** - Automate recurring income and expense tracking
-- **Interactive Charts** - Beautiful data visualization with Recharts
-- **Real-time Updates** - Live balance updates and transaction synchronization
+- **Multi-Account Management** - Track current and savings accounts in one view
+- **Transaction History** - Search, filter, edit, delete, and schedule recurring entries
+- **Budget Tracking** - Set and monitor a monthly spending limit
+- **Interactive Charts** - Review income, expenses, and category breakdowns with Recharts
 
 ### AI-Powered Features
 - **Receipt Scanning** - Extract transaction details from receipt photos using Google AI
 - **Smart Insights** - AI-generated financial insights and recommendations
-- **Automated Categorization** - Machine learning-powered expense categorization
+- **Assisted Categorization** - Review AI suggestions before saving a transaction
 
 ### Modern UI/UX
-- **Glassmorphism Design** - Modern frosted glass aesthetic with backdrop blur
-- **Dark/Light Mode** - Complete theme switching with system preference detection
-- **Responsive Design** - Seamless experience across desktop, tablet, and mobile
-- **Gradient Theming** - Beautiful indigo/purple gradient color scheme
-- **Micro-interactions** - Smooth animations and hover effects
+- **Dark/Light Mode** - Theme switching with system preference detection
+- **Responsive Design** - Mobile-first layouts across desktop, tablet, and mobile
+- **Accessible Feedback** - Clear empty, loading, success, and error states
 
 ### Security & Authentication
 - **Clerk Authentication** - Secure user authentication and session management
@@ -49,7 +44,7 @@
 ### Frontend
 - **[Next.js 15](https://nextjs.org/)** - React framework with App Router
 - **[React 19](https://react.dev/)** - Latest React with concurrent features
-- **[TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript
+- **JavaScript** - App Router components and server actions
 - **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
 - **[Radix UI](https://www.radix-ui.com/)** - Headless UI components
 - **[Recharts](https://recharts.org/)** - Composable charting library
@@ -65,7 +60,7 @@
 - **[Zod](https://zod.dev/)** - Schema validation
 
 ### AI & External Services
-- **[Google Generative AI](https://ai.google.dev/)** - Receipt scanning and insights
+- **[Google Gen AI](https://ai.google.dev/)** - Receipt scanning and insights
 - **[Resend](https://resend.com/)** - Email notifications
 - **[Inngest](https://www.inngest.com/)** - Background job processing
 
@@ -75,10 +70,10 @@
 - **[Sonner](https://sonner.emilkowal.ski/)** - Toast notifications
 - **[Lucide React](https://lucide.dev/)** - Beautiful icons
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
-- **Node.js** 18+ 
+- **Node.js** 20+ (Node 20 or newer LTS; see `.nvmrc`)
 - **PostgreSQL** database
 - **Clerk** account for authentication
 - **Google AI** API key (optional, for receipt scanning)
@@ -113,7 +108,7 @@ NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
 # Google AI (Optional)
-GOOGLE_AI_API_KEY=your_google_ai_api_key
+GEMINI_API_KEY=your_google_ai_api_key
 
 # Email (Optional)
 RESEND_API_KEY=your_resend_api_key
@@ -130,8 +125,7 @@ npx prisma generate
 # Run database migrations
 npx prisma migrate dev
 
-# Seed the database (optional)
-npm run seed
+# Seed the database (optional, if your environment exposes the seed route)
 ```
 
 ### 5. Start Development Server
@@ -162,16 +156,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 
 ## Design System
 
-### Color Palette
-- **Primary**: Indigo to Purple gradient (`#6366f1` → `#8b5cf6`)
-- **Secondary**: Violet to Pink gradient (`#7c3aed` → `#ec4899`)
-- **Success**: Emerald (`#10b981`)
-- **Warning**: Amber (`#f59e0b`)
-- **Error**: Red (`#ef4444`)
-
-### Typography
-- **Primary Font**: Plus Jakarta Sans
-- **Font Weights**: 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
+The interface uses Plus Jakarta Sans, a restrained slate/emerald palette, semantic success/warning/error colors, and layered surfaces that work in both light and dark themes.
 
 ## 🔧 Configuration
 
@@ -183,7 +168,7 @@ The application uses Prisma with PostgreSQL. Key models include:
 - **Budget** - Monthly budget allocations
 
 ### Tailwind Configuration
-Custom theme extensions for gradients, animations, and component styling.
+Theme tokens and small motion utilities live in `app/globals.css`; shared primitives live in `components/ui`.
 
 ## Features Walkthrough
 
@@ -232,5 +217,3 @@ npm start
 # Deploy database changes
 npx prisma migrate deploy
 ```
-
-

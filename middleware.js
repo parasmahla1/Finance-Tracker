@@ -40,8 +40,16 @@ const clerk = clerkMiddleware(async (auth, req) => {
   return NextResponse.next();
 });
 
-// Chain middlewares - ArcJet runs first, then Clerk
-export default createMiddleware(aj, clerk);
+// Arcjet needs a real client IP, which is not available when running the
+// production server behind a local process. Keep Clerk protection active
+// locally and apply Arcjet where the deployment provides request metadata.
+const securedMiddleware = createMiddleware(aj, clerk);
+
+export default function middleware(req, event) {
+  const hostname = req.nextUrl.hostname;
+  const isLocalRequest = hostname === "localhost" || hostname === "127.0.0.1";
+  return isLocalRequest ? clerk(req, event) : securedMiddleware(req, event);
+}
 
 export const config = {
   matcher: [

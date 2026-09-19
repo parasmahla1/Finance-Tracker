@@ -1,72 +1,65 @@
-import { getAccountWithTransactions } from '@/actions/account';
-import { notFound } from 'next/navigation';
-import React, { Suspense } from 'react';
-import { BarLoader } from 'react-spinners';
-import { TransactionTable } from '../_components/transaction-table';
-import { AccountChart } from '../_components/account-chart';
+import Link from "next/link";
+import { ArrowLeft, CreditCard, Plus } from "lucide-react";
+import { notFound } from "next/navigation";
 
-const AccountPage = async ({ params }) => {
+import { getAccountWithTransactions } from "@/actions/account";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { AccountChart } from "../_components/account-chart";
+import { TransactionTable } from "../_components/transaction-table";
+
+const money = (value) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+
+export default async function AccountPage({ params }) {
   const accountData = await getAccountWithTransactions(params.id);
+  if (!accountData) notFound();
 
-  if (!accountData) {
-    notFound();
-  }
+  const { transactions, ...account } = accountData;
+  const income = transactions.filter((item) => item.type === "INCOME").reduce((sum, item) => sum + item.amount, 0);
+  const expenses = transactions.filter((item) => item.type === "EXPENSE").reduce((sum, item) => sum + item.amount, 0);
 
-  const {transactions, ...account} = accountData;
   return (
-    <div className="space-y-8 px-4 md:px-6">
-      <div className="flex gap-4 items-end justify-between">
-        <div className="space-y-2">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight gradient-title capitalize">
-            {account.name}
-          </h1>
-          <div className="flex items-center space-x-2">
-            <span className="px-3 py-1 bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">
-              {account.type.charAt(0) + account.type.slice(1).toLowerCase()} Account
-            </span>
-            {account.isDefault && (
-              <span className="px-3 py-1 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
-                Default Account
-              </span>
-            )}
+    <div className="space-y-6">
+      <div>
+        <Button variant="ghost" size="sm" asChild className="-ml-3 mb-4">
+          <Link href="/dashboard"><ArrowLeft /> Back to dashboard</Link>
+        </Button>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><CreditCard /></span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{account.name}</h1>
+                {account.isDefault && <Badge>Default</Badge>}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">{account.type === "SAVINGS" ? "Savings" : "Current"} account · {transactions.length} transactions</p>
+            </div>
           </div>
-        </div>
-
-        <div className="text-right pb-2">
-          <div className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            ${parseFloat(account.balance).toFixed(2)}
+          <div className="flex items-center gap-2">
+            <div className="mr-2 text-right"><p className="text-xs text-muted-foreground">Current balance</p><p className="text-2xl font-semibold tracking-tight">{money(account.balance)}</p></div>
+            <Button asChild><Link href="/transaction/create"><Plus /> Add transaction</Link></Button>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {account._count.transactions} {account._count.transactions === 1 ? 'Transaction' : 'Transactions'}
-          </p>
         </div>
       </div>
 
-      <Suspense
-        fallback={<BarLoader className="mt-4" width={"100%"} color="#6366f1" />}
-      >
-        <div className="bg-gradient-to-br from-white to-indigo-50/30 dark:from-slate-800 dark:to-indigo-900/20 rounded-2xl p-6 border border-indigo-100/50 dark:border-indigo-800/30">
-          <AccountChart transactions={transactions} />
-        </div>
-      </Suspense>
-
-      {/* Transactions Table */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Transaction History</h2>
-          <p className="text-muted-foreground">{transactions.length} transactions</p>
-        </div>
-        <Suspense
-          fallback={<BarLoader className="mt-4" width={"100%"} color="#6366f1" />}
-        >
-          <div className="bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-900/20 rounded-2xl border border-purple-100/50 dark:border-purple-800/30 overflow-hidden">
-            <TransactionTable transactions={transactions} />
-          </div>
-        </Suspense>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Metric label="Balance" value={money(account.balance)} />
+        <Metric label="Income recorded" value={money(income)} tone="text-success" />
+        <Metric label="Expenses recorded" value={money(expenses)} tone="text-destructive" />
       </div>
-      
+
+      <Card><CardContent className="p-5 sm:p-6"><AccountChart transactions={transactions} /></CardContent></Card>
+
+      <section className="space-y-3">
+        <div><h2 className="text-lg font-semibold tracking-tight">Transaction history</h2><p className="mt-1 text-sm text-muted-foreground">Search, filter, and manage activity in this account.</p></div>
+        <Card><CardContent className="p-4 sm:p-6"><TransactionTable transactions={transactions} /></CardContent></Card>
+      </section>
     </div>
   );
-};
+}
 
-export default AccountPage;
+function Metric({ label, value, tone = "" }) {
+  return <Card className="gap-2 py-4"><CardContent className="px-5"><p className="text-xs text-muted-foreground">{label}</p><p className={`mt-1 text-lg font-semibold ${tone}`}>{value}</p></CardContent></Card>;
+}

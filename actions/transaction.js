@@ -5,13 +5,13 @@ import { db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import aj from "@/lib/arcjet";
 import { request } from "@arcjet/next";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const serializeAmount = (obj) => ({
   ...obj,
-  amount: obj.amount.toNumber(),
+  amount: obj.amount?.toNumber?.() ?? obj.amount,
 });
 
 export async function createTransaction(data) {
@@ -62,17 +62,33 @@ export async function createTransaction(data) {
       throw new Error("Account not found");
     }
 
-    const balanceChange = data.type === "EXPENSE" ? -data.amount : data.amount;
+    const amount = Number(data.amount);
+    const transactionDate = new Date(data.date);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Amount must be greater than zero");
+    }
+    if (Number.isNaN(transactionDate.getTime())) {
+      throw new Error("Invalid transaction date");
+    }
+
+    const balanceChange = data.type === "EXPENSE" ? -amount : amount;
     const newBalance = account.balance.toNumber() + balanceChange;
 
     const transaction = await db.$transaction(async (tx) => {
       const newTransaction = await tx.transaction.create({
         data: {
-          ...data,
+          type: data.type,
+          amount,
+          description: data.description?.trim() || null,
+          date: transactionDate,
+          category: data.category,
+          accountId: data.accountId,
+          isRecurring: Boolean(data.isRecurring),
+          recurringInterval: data.isRecurring ? data.recurringInterval : null,
           userId: user.id,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
-              ? calculateNextRecurringDate(data.date, data.recurringInterval)
+              ? calculateNextRecurringDate(transactionDate, data.recurringInterval)
               : null,
         },
       });
@@ -118,7 +134,12 @@ function calculateNextRecurringDate(startDate, interval) {
 
 export async function scanReceipt(file) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("Receipt scanning is not configured");
+    }
+    if (!file?.type?.startsWith("image/")) {
+      throw new Error("Please upload an image receipt");
+    }
 
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
@@ -145,25 +166,33 @@ export async function scanReceipt(file) {
       If its not a recipt, return an empty object
     `;
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          data: base64String,
-          mimeType: file.type,
+    const response = await genAI.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: [
+        {
+          inlineData: {
+            data: base64String,
+            mimeType: file.type,
+          },
         },
-      },
-      prompt,
-    ]);
+        prompt,
+      ],
+    });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = response.text || "";
     const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
 
     try {
       const data = JSON.parse(cleanedText);
+      const amount = Number(data.amount);
+      const date = new Date(data.date);
+      if (!Number.isFinite(amount) || Number.isNaN(date.getTime())) {
+        throw new Error("Receipt is missing a valid amount or date");
+      }
+
       return {
-        amount: parseFloat(data.amount),
-        date: new Date(data.date),
+        amount,
+        date,
         description: data.description,
         category: data.category,
         merchantName: data.merchantName,
@@ -232,8 +261,23 @@ export async function updateTransaction(id, data) {
         ? -originalTransaction.amount.toNumber()
         : originalTransaction.amount.toNumber();
 
+    const amount = Number(data.amount);
+    const transactionDate = new Date(data.date);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Amount must be greater than zero");
+    }
+    if (Number.isNaN(transactionDate.getTime())) {
+      throw new Error("Invalid transaction date");
+    }
+
+    const nextAccount = await db.account.findFirst({
+      where: { id: data.accountId, userId: user.id },
+      select: { id: true },
+    });
+    if (!nextAccount) throw new Error("Account not found");
+
     const newBalanceChange =
-      data.type === "EXPENSE" ? -data.amount : data.amount;
+      data.type === "EXPENSE" ? -amount : amount;
 
     const netBalanceChange = newBalanceChange - oldBalanceChange;
 
@@ -244,28 +288,43 @@ export async function updateTransaction(id, data) {
           userId: user.id,
         },
         data: {
-          ...data,
+          type: data.type,
+          amount,
+          description: data.description?.trim() || null,
+          date: transactionDate,
+          category: data.category,
+          accountId: data.accountId,
+          isRecurring: Boolean(data.isRecurring),
+          recurringInterval: data.isRecurring ? data.recurringInterval : null,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
-              ? calculateNextRecurringDate(data.date, data.recurringInterval)
+              ? calculateNextRecurringDate(transactionDate, data.recurringInterval)
               : null,
         },
       });
 
-      await tx.account.update({
-        where: { id: data.accountId },
-        data: {
-          balance: {
-            increment: netBalanceChange,
-          },
-        },
-      });
+      if (originalTransaction.accountId === data.accountId) {
+        await tx.account.update({
+          where: { id: data.accountId },
+          data: { balance: { increment: netBalanceChange } },
+        });
+      } else {
+        await tx.account.update({
+          where: { id: originalTransaction.accountId },
+          data: { balance: { increment: -oldBalanceChange } },
+        });
+        await tx.account.update({
+          where: { id: data.accountId },
+          data: { balance: { increment: newBalanceChange } },
+        });
+      }
 
       return updated;
     });
 
     revalidatePath("/dashboard");
     revalidatePath(`/account/${data.accountId}`);
+    revalidatePath(`/account/${originalTransaction.accountId}`);
 
     return { success: true, data: serializeAmount(transaction) };
   } catch (error) {
